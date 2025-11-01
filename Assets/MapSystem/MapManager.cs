@@ -82,7 +82,7 @@ public class MapManager : MonoBehaviour
         Vector2 p4 = center + new Vector2(-halfWidth, -halfHeight); // ¿ÞÂÊ ¾Æ·¡
 
         sq = new Square(p1, p2, p3, p4);
-        sq.Position = position;
+        sq.Position = new Vector3(sq.Center.x, position.y, sq.Center.y);
 
         return sq;
     }
