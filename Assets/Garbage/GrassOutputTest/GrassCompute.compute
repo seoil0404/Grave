@@ -1,0 +1,45 @@
+#pragma kernel CSMain
+
+RWStructuredBuffer<float4> _PositionBuffer;
+
+int _InstanceCount;
+float2 _AreaSize;
+float _NoiseScale;
+float _NoiseThreshold;
+float2 _ScaleRange;
+
+float hash(float2 p)
+{
+    return frac(sin(dot(p, float2(127.1, 311.7))) * 43758.5453);
+}
+
+float noise(float2 p)
+{
+    float2 i = floor(p);
+    float2 f = frac(p);
+    float a = hash(i);
+    float b = hash(i + float2(1, 0));
+    float c = hash(i + float2(0, 1));
+    float d = hash(i + float2(1, 1));
+    float2 u = f * f * (3.0 - 2.0 * f);
+    return lerp(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
+}
+
+[numthreads(64, 1, 1)]
+void CSMain(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= _InstanceCount)
+        return;
+
+    float2 randXZ = (float2(id.x * 13.37, id.x * 7.13) % _AreaSize) - (_AreaSize / 2.0);
+    float n = noise(randXZ * _NoiseScale);
+
+    if (n < _NoiseThreshold)
+    {
+        _PositionBuffer[id.x] = float4(0, -999, 0, 0);
+        return;
+    }
+
+    float scale = lerp(_ScaleRange.x, _ScaleRange.y, frac(n * 7.23));
+    _PositionBuffer[id.x] = float4(randXZ.x, 0, randXZ.y, scale);
+}
