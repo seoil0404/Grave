@@ -5,14 +5,14 @@ public interface IPlayerCombatController
 
 }
 
-public class PlayerCombatController : MonoBehaviour, IPlayerCombatController, IManagedBehaviour
+public class PlayerCombatController : MonoBehaviour, IPlayerCombatController
 {
-    public void OnStart()
+    public void Start()
     {
 
     }
 
-    public void OnUpdate()
+    public void Update()
     {
 
     }

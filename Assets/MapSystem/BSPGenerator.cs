@@ -1,40 +1,55 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UIElements;
 
 public class BSPGenerator
 {
-    public class Node
+    private class Node
     {
-        public Square area;
-        public Node left;
-        public Node right;
-        public bool IsLeaf => left == null && right == null;
-        public Node(Square square) { area = square; }
+        public Square Area { get; set; }
+        public Node Left { get; set; }
+        public Node Right { get; set; }
+        public bool IsLeaf => Left == null && Right == null;
+        public Node(Square square) { Area = square; }
     }
 
-    public Node root;
+    private Node root;
     private float minSize;
     private float gap;
     private float minSplitRatio;
     private float maxSplitRatio;
 
-    public BSPGenerator(Square rootArea, float minSize = 5f, float gap = 0.9f, float minSplitRatio = 0.3f, float maxSplitRatio = 0.7f)
+    public void GenerateBSP(
+        Vector2 bspSize, 
+        int splitDepth,
+        float minSize = 5f, 
+        float gap = 0.9f, 
+        float minSplitRatio = 0.3f, 
+        float maxSplitRatio = 0.7f)
     {
-        root = new Node(rootArea);
+        root = new Node(new Square(
+                    new Vector2(-bspSize.x / 2, bspSize.y / 2),
+                    new Vector2(bspSize.x / 2, bspSize.y / 2),
+                    new Vector2(bspSize.x / 2, -bspSize.y / 2),
+                    new Vector2(-bspSize.x / 2, -bspSize.y / 2)
+                ));
+
         this.minSize = minSize;
         this.gap = gap;
         this.maxSplitRatio = maxSplitRatio;
         this.minSplitRatio = minSplitRatio;
+
+        Split(root, splitDepth);
     }
 
-    public void Split(Node node, int depth)
+    private void Split(Node node, int depth)
     {
         if (node == null || depth <= 0)
             return;
 
-        float width = Vector2.Distance(node.area.Point1, node.area.Point2);
-        float height = Vector2.Distance(node.area.Point1, node.area.Point4);
+        float width = Vector2.Distance(node.Area.Point1, node.Area.Point2);
+        float height = Vector2.Distance(node.Area.Point1, node.Area.Point4);
 
         bool splitHorizontally = Random.value > 0.5f;
 
@@ -51,10 +66,10 @@ public class BSPGenerator
         float maxSplit = size * maxSplitRatio;
         float split = Random.Range(minSplit, maxSplit);
 
-        Vector2 p1 = node.area.Point1; // 왼쪽 위
-        Vector2 p2 = node.area.Point2; // 오른쪽 위
-        Vector2 p3 = node.area.Point3; // 오른쪽 아래
-        Vector2 p4 = node.area.Point4; // 왼쪽 아래
+        Vector2 p1 = node.Area.Point1; // 왼쪽 위
+        Vector2 p2 = node.Area.Point2; // 오른쪽 위
+        Vector2 p3 = node.Area.Point3; // 오른쪽 아래
+        Vector2 p4 = node.Area.Point4; // 왼쪽 아래
 
         if (splitHorizontally)
         {
@@ -77,8 +92,8 @@ public class BSPGenerator
                 new Vector2(p1.x, ySplit)   // 왼쪽 아래
             );
 
-            node.left = new Node(bottom);
-            node.right = new Node(top);
+            node.Left = new Node(bottom);
+            node.Right = new Node(top);
         }
         else
         {
@@ -101,25 +116,70 @@ public class BSPGenerator
                 new Vector2(xSplit, p3.y)   // 왼쪽 아래
             );
 
-            node.left = new Node(left);
-            node.right = new Node(right);
+            node.Left = new Node(left);
+            node.Right = new Node(right);
         }
 
-        Split(node.left, depth - 1);
-        Split(node.right, depth - 1);
-    }
+        node.Area = ApplyGap(node.Area);
 
-    public List<Square> GetLeafAreas(Node node)
+        Split(node.Left, depth - 1);
+        Split(node.Right, depth - 1);
+    }
+    private Square ApplyGap(Square sq)
+    {
+        Vector2 center = (sq.Point1 + sq.Point3) / 2f;
+        Vector3 position = sq.Position;
+
+        float width = sq.Point2.x - sq.Point1.x;
+        width *= gap;
+        float halfWidth = width / 2f;
+
+        float height = sq.Point1.y - sq.Point4.y;
+        height *= gap;
+        float halfHeight = height / 2f;
+
+        Vector2 p1 = center + new Vector2(-halfWidth, halfHeight);  // 왼쪽 위
+        Vector2 p2 = center + new Vector2(halfWidth, halfHeight);   // 오른쪽 위
+        Vector2 p3 = center + new Vector2(halfWidth, -halfHeight);  // 오른쪽 아래
+        Vector2 p4 = center + new Vector2(-halfWidth, -halfHeight); // 왼쪽 아래
+
+        sq = new Square(p1, p2, p3, p4);
+        sq.Position = new Vector3(sq.Center.x, position.y, sq.Center.y);
+
+        return sq;
+    }
+    public List<Square> GetAreas()
+    {
+        List<Square> result = new();
+        if (root == null) return result;
+
+        if (root.IsLeaf)
+        {
+            root.Area = ApplyGap(root.Area);
+            result.Add(root.Area);
+        }
+        else
+        {
+            result.AddRange(GetAreas(root.Left));
+            result.AddRange(GetAreas(root.Right));
+        }
+
+        return result;
+    }
+    private List<Square> GetAreas(Node node)
     {
         List<Square> result = new();
         if (node == null) return result;
 
         if (node.IsLeaf)
-            result.Add(node.area);
+        {
+            node.Area = ApplyGap(node.Area);
+            result.Add(node.Area);
+        }
         else
         {
-            result.AddRange(GetLeafAreas(node.left));
-            result.AddRange(GetLeafAreas(node.right));
+            result.AddRange(GetAreas(node.Left));
+            result.AddRange(GetAreas(node.Right));
         }
 
         return result;

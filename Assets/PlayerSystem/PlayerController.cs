@@ -4,29 +4,28 @@ public class PlayerContext
 {
     public IPlayerCombatController CombatController { get; set; }
     public IPlayerMovementController MovementController { get; set; }
+    public IPlayerAnimationController AnimationController { get; set; }
 }
 
-public class PlayerState
+public enum PlayerState
 {
-
-}
-
-public interface IManagedBehaviour
-{
-    void OnStart();
-    void OnUpdate();
+    Normal,
+    Cinematic,
+    Dead,
+    UIOnly,
+    Acting // Normal Attack, Skills
 }
 
 [RequireComponent(typeof(PlayerMovementController))]
 [RequireComponent(typeof(PlayerCombatController))]
+[RequireComponent(typeof(PlayerAnimationController))]
 public class PlayerController : MonoBehaviour
 {
     public static PlayerController Instance { get; private set; }
     public static PlayerContext PlayerContext { get; private set; }
-    public static PlayerState PlayerState { get; private set; }
-
-    private IManagedBehaviour combatController;
-    private IManagedBehaviour movementController;
+    public static PlayerState PlayerState { get; private set; } = PlayerState.Normal;
+    
+    public static void ChangeState(PlayerState state) => PlayerState = state;
 
 
     private void Awake()
@@ -36,26 +35,24 @@ public class PlayerController : MonoBehaviour
         Instance = this;
 
         PlayerContext = new();
-        PlayerState = new();
 
-        var _combatController = GetComponent<PlayerCombatController>();
-        PlayerContext.CombatController = _combatController;
-        combatController = _combatController;
+        var combatController = GetComponent<PlayerCombatController>();
+        PlayerContext.CombatController = combatController;
 
-        var _movementController = GetComponent<PlayerMovementController>();
-        PlayerContext.MovementController = _movementController;
-        movementController = _movementController;
+        var movementController = GetComponent<PlayerMovementController>();
+        PlayerContext.MovementController = movementController;
+
+        var animationController = GetComponent<PlayerAnimationController>();
+        PlayerContext.AnimationController = animationController;
     }
 
     private void Start()
     {
-        combatController.OnStart();
-        movementController.OnStart();
+        
     }
 
     private void Update()
     {
-        combatController.OnUpdate();
-        movementController.OnUpdate();
+        
     }
 }
