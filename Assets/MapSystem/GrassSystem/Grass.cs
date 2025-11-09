@@ -1,27 +1,47 @@
 using UnityEngine;
 
-public class GrassGPUManager : MonoBehaviour
+public class Grass : MonoBehaviour
 {
-    [Header("References")]
-    [SerializeField] private Mesh grassMesh;
-    [SerializeField] private Material grassMaterial;
-    [SerializeField] private ComputeShader grassCompute;
+    private Mesh grassMesh;
+    private Material grassMaterial;
+    private ComputeShader grassCompute;
 
-    [Header("Settings")]
-    [SerializeField] private Vector2 areaSize = new(100, 100);
-    [SerializeField] private int instanceCount = 100000;
-    [SerializeField] private float noiseScale = 0.08f;
-    [SerializeField] private float noiseThreshold = 0.4f;
-    [SerializeField] private Vector2 scaleRange = new(0.8f, 1.3f);
+    private Vector2 areaSize;
+    private int instanceCount;
+    private float randomStrength;
+    private Vector3 position;
+    private Vector2 scaleRange;
 
     private ComputeBuffer positionBuffer;
     private ComputeBuffer argsBuffer;
 
-    private readonly uint[] args = new uint[5]; // 인스턴싱 인자용 (DrawMeshInstancedIndirect)
+    private readonly uint[] args = new uint[5];
     private int kernelID;
 
-    private void Start()
+    private bool isInitialized = false;
+
+    public void DrawGrass(
+        Square square, 
+        float instanceCountScale,
+        float heightOffset,
+        float randomStrength, 
+        Vector2 scaleRange,
+        Mesh grassMesh, 
+        Material grassMaterial, 
+        ComputeShader grassCompute)
     {
+        this.areaSize = new Vector2(square.Point2.x - square.Point1.x, square.Point2.y - square.Point3.y);
+        this.position = square.Position + Vector3.up * heightOffset;
+        this.instanceCount = (int)((square.Point2.x - square.Point1.x) * (square.Point2.y - square.Point3.y) * instanceCountScale);
+        this.randomStrength = randomStrength;
+        this.scaleRange = scaleRange;
+
+        this.grassMesh = grassMesh;
+        this.grassMaterial = grassMaterial;
+        this.grassCompute = grassCompute;
+
+        isInitialized = true;
+
         InitBuffers();
         DispatchCompute();
     }
@@ -48,9 +68,9 @@ public class GrassGPUManager : MonoBehaviour
         // 매개변수 전달
         grassCompute.SetInt("_InstanceCount", instanceCount);
         grassCompute.SetFloats("_AreaSize", areaSize.x, areaSize.y);
-        grassCompute.SetFloat("_NoiseScale", noiseScale);
-        grassCompute.SetFloat("_NoiseThreshold", noiseThreshold);
         grassCompute.SetFloats("_ScaleRange", scaleRange.x, scaleRange.y);
+        grassCompute.SetFloat("_RandomStrength", randomStrength);
+        grassCompute.SetFloat("_Height", position.y);
 
         grassMaterial.SetBuffer("_PositionBuffer", positionBuffer);
     }
@@ -64,10 +84,10 @@ public class GrassGPUManager : MonoBehaviour
     private void Update()
     {
         // Draw call
-        if (grassMesh != null && grassMaterial != null)
+        if (isInitialized)
         {
             Graphics.DrawMeshInstancedIndirect(grassMesh, 0, grassMaterial,
-                new Bounds(Vector3.zero, new Vector3(areaSize.x, 50, areaSize.y)), argsBuffer);
+                new Bounds(position, new Vector3(areaSize.x, 50, areaSize.y)), argsBuffer);
         }
     }
 

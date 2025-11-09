@@ -2,9 +2,10 @@ Shader "Custom/GrassIndirect"
 {
     Properties
     {
-        _BaseColor("Base Color", Color) = (0.4, 0.8, 0.4, 1)
         _WindStrength("Wind Strength", Range(0,1)) = 0.3
         _WindSpeed("Wind Speed", Range(0,10)) = 2
+        _MainTex("Main Texture", 2D) = "white" {}
+        _ScaleCorrection("Scale Correction", Vector) = (1, 1, 1, 1)
     }
 
     SubShader
@@ -19,22 +20,28 @@ Shader "Custom/GrassIndirect"
             #pragma fragment frag
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
+            TEXTURE2D(_MainTex);
+            SAMPLER(sampler_MainTex);
+
             StructuredBuffer<float4> _PositionBuffer;
             float4 _BaseColor;
             float _WindStrength;
             float _WindSpeed;
+            float4 _ScaleCorrection;
 
             struct Attributes
             {
                 float3 positionOS : POSITION;
-                float3 normalOS : NORMAL;
-                uint instanceID : SV_InstanceID;
+                float3 normalOS   : NORMAL;
+                float2 uv         : TEXCOORD0;
+                uint instanceID   : SV_InstanceID;
             };
 
             struct Varyings
             {
                 float4 positionHCS : SV_POSITION;
-                float3 normalWS : NORMAL;
+                float3 normalWS    : NORMAL;
+                float2 uv          : TEXCOORD0;
             };
 
             Varyings vert(Attributes IN)
@@ -48,7 +55,8 @@ Shader "Custom/GrassIndirect"
                 if (data.y < -100.0)
                     instancePos.y = -10000;
 
-                float3 worldPos = TransformObjectToWorld(IN.positionOS * scale);
+                float3 objPos = IN.positionOS * scale * _ScaleCorrection.xyz;
+                float3 worldPos = TransformObjectToWorld(objPos);
                 worldPos += instancePos;
 
                 float wind = sin(worldPos.x * 0.2 + _Time.y * _WindSpeed)
@@ -59,14 +67,19 @@ Shader "Custom/GrassIndirect"
 
                 OUT.positionHCS = TransformWorldToHClip(worldPos);
                 OUT.normalWS = TransformObjectToWorldNormal(IN.normalOS);
+                OUT.uv = IN.uv;
+
                 return OUT;
             }
 
             half4 frag(Varyings IN) : SV_Target
             {
+                half4 texColor = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, IN.uv);
+
                 half3 lightDir = normalize(float3(0.4, 1, 0.3));
                 half diff = saturate(dot(IN.normalWS, lightDir)) * 0.6 + 0.4;
-                return half4(_BaseColor.rgb * diff, 1);
+
+                return texColor * diff;
             }
             ENDHLSL
         }

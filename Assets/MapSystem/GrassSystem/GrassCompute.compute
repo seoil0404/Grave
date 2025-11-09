@@ -1,0 +1,34 @@
+#pragma kernel CSMain
+
+RWStructuredBuffer<float4> _PositionBuffer;
+
+int _InstanceCount;
+float2 _AreaSize;
+float2 _ScaleRange;
+float _RandomStrength;
+float _Height;
+
+[numthreads(64, 1, 1)]
+void CSMain(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= _InstanceCount)
+        return;
+    
+    float gridSize = sqrt((float) _InstanceCount);
+    float2 gridPos = float2(
+        fmod(id.x, gridSize),
+        floor(id.x / gridSize)
+    );
+    
+    float2 normalized = gridPos / gridSize;
+    float2 worldXZ = (normalized - 0.5) * _AreaSize;
+    
+    float randX = frac(sin(dot(worldXZ, float2(12.9898, 78.233))) * 43758.5453);
+    float randZ = frac(sin(dot(worldXZ, float2(96.9898, 45.233))) * 12534.5453);
+    worldXZ += float2(randX - 0.5, randZ - 0.5) * _RandomStrength;
+    
+    float randScale = frac(sin(id.x * 57.3) * 43758.5453);
+    float scale = lerp(_ScaleRange.x, _ScaleRange.y, randScale);
+    
+    _PositionBuffer[id.x] = float4(worldXZ.x, 0, worldXZ.y, scale);
+}

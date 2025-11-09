@@ -18,6 +18,8 @@ public class GameManager : MonoBehaviour
                 MapManager.CurrentSquare.Position + Vector3.up * 2, 
                 1f
                 );
+
+            GrassManager.Instance.DrawGrass(MapManager.CurrentSquare);
         }
     }
 }
