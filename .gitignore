@@ -97,3 +97,13 @@ InitTestScene*.unity*
 
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
+
+# 100MB 초과 파일 무시
+Assets/EnemySystem/Enemies/Zombie/Zombie_Model.fbx
+
+Assets/ExternalAssets/Allsky/Anime/Above Night A/Above Night A Equirect.png
+Assets/ExternalAssets/Allsky/Anime/Anime Day/Anime Day Equirect.png
+Assets/ExternalAssets/Allsky/Anime/Anime Night/Anime Night Equirect.png
+Assets/ExternalAssets/Allsky/Anime/Anime Sunset/Anime Sunset Equirect.png
+Assets/ExternalAssets/Allsky/Mammatus/Mammatus Sunset A/Mammatus Sunset A Equirect.png
+Assets/ExternalAssets/Allsky/Above/Above Night A/Above Night A Equirect.png
