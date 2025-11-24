@@ -21,12 +21,7 @@ public class GrassManager : MonoBehaviour
 
     private void Awake()
     {
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
-        else return;
+        Instance = this;
     }
 
     public void DrawGrass(Square square)
@@ -37,7 +32,7 @@ public class GrassManager : MonoBehaviour
         var newGrass = newObject.AddComponent<Grass>();
         newGrass.DrawGrass(square, instanceCountScale, heightOffset, randomStrength, scaleRange, grassMesh, Instantiate(grassMaterial), grassCompute);
 
-        if(grassQueue.Count >= maxGrassQueueCount) Destroy(grassQueue.Dequeue().gameObject);
+        if(grassQueue.Count >= maxGrassQueueCount) Destroy(grassQueue.Dequeue().gameObject, 5f);
         grassQueue.Enqueue(newGrass);
     }
 }

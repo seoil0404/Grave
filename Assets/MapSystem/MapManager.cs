@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using Unity.AI.Navigation;
 using UnityEngine;
 
 public class MapManager : MonoBehaviour
@@ -12,29 +14,42 @@ public class MapManager : MonoBehaviour
     [SerializeField] private float minRoomSize = 1f;
     [SerializeField] private float gap = 0.9f;
     [SerializeField] private int splitDepth = 5;
+    [SerializeField] private float maxRoomScale;
     [SerializeField] private Transform startPosition;
     [SerializeField] private Map mapPrefab;
 
     private List<Map> mapList = new();
-
-    public static Square CurrentSquare { get; set; }
+    private static Square currentSquare;
 
     private float currentHeightOffset = 0;
     private Square currentHighestSquare;
 
+    public static Square CurrentSquare
+    {
+        get { return currentSquare; }
+        set
+        {
+            currentSquare = value;
+        }
+    }
+
+    public static MapManager Instance { get; private set; }
+
     private void Awake()
     {
+        Instance = this;
+
         Square initSquare = new(Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
         initSquare.Position = startPosition.position;
         CurrentSquare = initSquare;
 
         currentHighestSquare = initSquare;
-
-        mapList.Add(GenerateMap());
-        mapList.Add(GenerateMap());
-        mapList.Add(GenerateMap());
     }
 
+    public void AddMap()
+    {
+        mapList.Add(GenerateMap());
+    }
 
     private Map GenerateMap()
     {
@@ -45,7 +60,14 @@ public class MapManager : MonoBehaviour
         BSPGenerator bspGenerator = new();
         bspGenerator.GenerateBSP(mapSize, splitDepth, minRoomSize, gap);
         List<Square> squares = bspGenerator.GetAreas();
-        squares.ForEach(t => t.Position += Vector3.up * currentHeightOffset);
+        squares.ForEach(t => t.Position = Vector3.up * (currentHeightOffset));
+        List<Square> filteredSqaures = squares.Where(square => square.Area <= maxRoomScale).ToList();
+        if(filteredSqaures.Count <= 0)
+        {
+            filteredSqaures.Add(squares.OrderBy(square => square.Area).First());
+        }
+        else squares = filteredSqaures;
+        
 
         List<Edge> edges = TriangulationGenerator.Generate(squares);
         
@@ -62,7 +84,10 @@ public class MapManager : MonoBehaviour
             square = square.TargetNode.Square;
         }
 
+        eulerianSquares.Add(square);
         currentHighestSquare = square;
+        currentHighestSquare.TargetNode = null;
+
         currentHeightOffset += map.DrawMap(eulerianSquares);
 
         return map;

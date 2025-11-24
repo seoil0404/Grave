@@ -1,13 +1,17 @@
 using NUnit.Framework.Internal;
 using System.Collections.Generic;
+using Unity.AI.Navigation;
 using UnityEngine;
+using UnityEngine.AI;
 
 [RequireComponent(typeof(MeshRenderer))]
 [RequireComponent(typeof(MeshFilter))]
-[RequireComponent (typeof(MeshCollider))]
+[RequireComponent(typeof(MeshCollider))]
+[RequireComponent(typeof(NavMeshSurface))]
 public class Map : MonoBehaviour
 {
     private Mesh mesh;
+    private NavMeshSurface navMeshSurface;
 
     private float heightOffset, height, heightInterval;
 
@@ -16,6 +20,8 @@ public class Map : MonoBehaviour
         this.height = height;
         this.heightInterval = heightInterval;
         this.heightOffset = heightOffset;
+
+        navMeshSurface = GetComponent<NavMeshSurface>();
     }
 
     private void DrawSquare(Square square, List<Vector3> vertices, List<int> triangles, List<Vector2> uvs, float currentHeightInterval)
@@ -31,7 +37,7 @@ public class Map : MonoBehaviour
         Vector3 p7 = new(square.Point3.x, heightOffset + height + currentHeightInterval, square.Point3.y);
         Vector3 p8 = new(square.Point4.x, heightOffset + height + currentHeightInterval, square.Point4.y);
 
-        square.Position = new Vector3(square.Center.x, heightOffset + height + currentHeightInterval, square.Center.y);
+        square.Position = new Vector3(square.Center.x, square.Position.y + heightOffset + height + currentHeightInterval, square.Center.y);
 
         int start;
 
@@ -108,9 +114,16 @@ public class Map : MonoBehaviour
         collider.sharedMesh = mesh;
         collider.convex = false;
 
+        GenerateNavMeshSurface();
+
         return currentHeightInterval;
     }
 
+    private void GenerateNavMeshSurface()
+    {
+        navMeshSurface.collectObjects = CollectObjects.Children;
+        navMeshSurface.BuildNavMesh();
+    }
 
     private static Vector2[] UV()
     {

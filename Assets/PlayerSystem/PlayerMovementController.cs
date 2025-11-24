@@ -4,7 +4,12 @@ using UnityEngine;
 public interface IPlayerMovementController
 {
     Vector2 MoveDirection { get; }
-    void MoveCurve(Vector3 start, Vector3 end, float time = 3f);
+    public void MoveCurve(Vector3 start, Vector3 end, float time = 3f);
+    public void SetVelocity(Vector3 velocity);
+    public void Stop();
+    public bool IsSliding { get; }
+    public float Speed { get; set; }
+    public float SlideCooldown { get; set; }
 }
 
 [RequireComponent(typeof(Rigidbody))]
@@ -12,14 +17,37 @@ public class PlayerMovementController : MonoBehaviour, IPlayerMovementController
 {
     [Header("Movement Setting")]
     [SerializeField] private float moveSpeed;
+    [SerializeField] private float slideCooldown;
+    [SerializeField] private float slidingPower;
+
+    [Header("Model")]
+    [SerializeField] private Transform modelTransform;
 
     [Header("Palabolic Curve Setting")]
     [SerializeField] private float height = 3f;
 
     private Rigidbody playerRigidbody;
-
     private Vector2 moveDirection;
+
+    private Coroutine currentSlidingCoroutine = null;
+    private bool isSlidable = true;
+    private bool isSliding = false;
+
     public Vector2 MoveDirection => moveDirection;
+
+    public bool IsSliding => isSliding;
+
+    public float Speed
+    {
+        get => moveSpeed;
+        set => moveSpeed = value;
+    }
+
+    public float SlideCooldown
+    {
+        get => slideCooldown;
+        set => slideCooldown = value;
+    }
 
     public void Start()
     {
@@ -32,6 +60,47 @@ public class PlayerMovementController : MonoBehaviour, IPlayerMovementController
             HandleInput();
         if (PlayerController.PlayerState == PlayerState.Cinematic)
             HandleCurveMove();
+
+        HandleSliding();
+    }
+
+    private void HandleSliding()
+    {
+        if (Input.GetKeyDown(KeyCode.LeftShift) && isSlidable)
+        {
+            if (PlayerController.PlayerState == PlayerState.Normal || PlayerController.PlayerState == PlayerState.Acting)
+            {
+                PlayerController.PlayerContext.CombatController.Stop();
+                PlayerController.PlayerContext.AnimationController.Play(PlayerAnimationType.Sliding, 0.1f);
+
+                Vector2 moveDirection = PlayerController.PlayerContext.MovementController.MoveDirection;
+                float angle = Mathf.Atan2(moveDirection.x, moveDirection.y) * Mathf.Rad2Deg;
+                angle += transform.eulerAngles.y;
+
+                playerRigidbody.AddForce(
+                    new Vector3(Mathf.Sin(angle * Mathf.Deg2Rad), 0, Mathf.Cos(angle * Mathf.Deg2Rad)) * slidingPower, 
+                    ForceMode.Impulse
+                    );
+
+                currentSlidingCoroutine = StartCoroutine(SlidingCoroutine());
+            }
+        }
+    }
+
+    private IEnumerator SlidingCoroutine()
+    {
+        PlayerController.ChangeState(PlayerState.Acting);
+        isSlidable = false;
+        isSliding = true;
+
+        yield return new WaitForSeconds(0.5f);
+
+        isSliding = false;
+        PlayerController.ChangeState(PlayerState.Normal);
+
+        yield return new WaitForSeconds(slideCooldown);
+
+        isSlidable = true;
     }
 
     private void HandleInput()
@@ -51,6 +120,21 @@ public class PlayerMovementController : MonoBehaviour, IPlayerMovementController
             moveDir.z * moveSpeed
         );
 
+    }
+
+    public void Stop()
+    {
+        SetVelocity(Vector3.zero);
+        isSlidable = true;
+
+        if(currentSlidingCoroutine != null )
+            StopCoroutine(currentSlidingCoroutine);
+    }
+
+
+    public void SetVelocity(Vector3 velocity)
+    {
+        playerRigidbody.linearVelocity = velocity;
     }
 
     #region Curve
@@ -74,6 +158,8 @@ public class PlayerMovementController : MonoBehaviour, IPlayerMovementController
         this.end = end;
         leftCurveTime = time;
         curveTime = time;
+
+        PlayerController.ChangeState(PlayerState.Stop);
 
         StartCoroutine(MoveCurveDelay());
         PlayerController.PlayerContext.AnimationController.OnMoveCurve(time);

@@ -50,11 +50,9 @@ public class Grass : MonoBehaviour
     {
         kernelID = grassCompute.FindKernel("CSMain");
 
-        // Position buffer (Vector4: xyz=pos, w=scale)
         positionBuffer = new ComputeBuffer(instanceCount, sizeof(float) * 4);
         grassCompute.SetBuffer(kernelID, "_PositionBuffer", positionBuffer);
 
-        // Indirect args buffer
         argsBuffer = new ComputeBuffer(1, args.Length * sizeof(uint), ComputeBufferType.IndirectArguments);
 
         uint indexCount = (grassMesh != null) ? grassMesh.GetIndexCount(0) : 0;
@@ -65,7 +63,6 @@ public class Grass : MonoBehaviour
         args[4] = 0;
         argsBuffer.SetData(args);
 
-        // 매개변수 전달
         grassCompute.SetInt("_InstanceCount", instanceCount);
         grassCompute.SetFloats("_AreaSize", areaSize.x, areaSize.y);
         grassCompute.SetFloats("_ScaleRange", scaleRange.x, scaleRange.y);

@@ -1,3 +1,4 @@
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class PlayerRotator : MonoBehaviour
@@ -8,11 +9,14 @@ public class PlayerRotator : MonoBehaviour
 
     private void Start()
     {
-        Cursor.lockState = CursorLockMode.Locked;
+        
     }
 
     private void Update()
     {
+        if(PlayerController.PlayerState == PlayerState.Dead || PlayerController.PlayerState == PlayerState.Start || PlayerController.PlayerState == PlayerState.Cinematic)
+            return;
+
         float mouseX = Input.GetAxis("Mouse X") * sensitivity * Time.deltaTime;
         yRotation += mouseX;
 

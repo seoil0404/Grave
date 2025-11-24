@@ -63,6 +63,7 @@ public class Square
     public Vector3 Position { get; set; }
     public float Width => Point2.x - Point1.x;
     public float Height => Point2.y - Point3.y;
+    public float Area => (Point2.x - Point1.x) * (Point2.y - Point3.y);
     public float Distance(Square other)
     {
         float distance = Vector2.Distance(
@@ -112,4 +113,11 @@ public struct Edge
         int h1 = Point1.GetHashCode() ^ Point2.GetHashCode();
         return h1;
     }
+}
+
+public struct Point
+{
+    public Vector2 Position { get; set; }
+
+    public float Distance(Point other) => Vector2.Distance(Position, other.Position);
 }
